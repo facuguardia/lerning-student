@@ -100,6 +100,20 @@ export default async function DashboardPage() {
     );
   };
 
+  const getModuleProgressPercent = (moduleId: string) => {
+    if (isModuleCompleted(moduleId)) return 100;
+    const ids = assignmentsByModule.get(moduleId) || [];
+    const total = ids.length;
+    if (total === 0) return 0;
+    const approved = ids.filter((assignmentId) => {
+      const submission = submissions?.find(
+        (s: any) => s.assignment_id === assignmentId
+      );
+      return submission?.is_approved === true;
+    }).length;
+    return Math.round((approved / total) * 100);
+  };
+
   const completedModules = moduleStates.filter((m) =>
     isModuleCompleted(m.id)
   ).length;
@@ -202,6 +216,7 @@ export default async function DashboardPage() {
               isUnlocked={module.isUnlocked}
               isCompleted={isModuleCompleted(module.id)}
               quizScore={getModuleQuizScore(module.id)}
+              progressPercent={getModuleProgressPercent(module.id)}
             />
           ))}
         </div>

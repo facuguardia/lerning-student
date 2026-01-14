@@ -10,10 +10,18 @@ interface ModuleCardProps {
   isUnlocked: boolean
   isCompleted: boolean
   quizScore: number | null
+  progressPercent: number
   index: number
 }
 
-export function ModuleCard({ module, isUnlocked, isCompleted, quizScore, index }: ModuleCardProps) {
+export function ModuleCard({
+  module,
+  isUnlocked,
+  isCompleted,
+  quizScore,
+  progressPercent,
+  index,
+}: ModuleCardProps) {
   const statusIcon = isCompleted ? (
     <CheckCircle className="h-5 w-5 text-success" />
   ) : isUnlocked ? (
@@ -47,7 +55,7 @@ export function ModuleCard({ module, isUnlocked, isCompleted, quizScore, index }
         {/* Progress */}
         {isUnlocked && (
           <div className="space-y-2">
-            <ProgressBar value={isCompleted ? 100 : quizScore || 0} size="sm" />
+            <ProgressBar value={progressPercent} size="sm" />
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <BookOpen className="h-3.5 w-3.5" />
