@@ -1,65 +1,180 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect, notFound } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft, FileText, Github, Globe, Calendar } from "lucide-react"
-import { SubmissionForm } from "@/components/assignments/submission-form"
-import { SubmissionStatus } from "@/components/assignments/submission-status"
+import { createClient } from "@/lib/supabase/server";
+import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, FileText, Github, Globe, Calendar } from "lucide-react";
+import { SubmissionForm } from "@/components/assignments/submission-form";
+import { SubmissionStatus } from "@/components/assignments/submission-status";
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
+}
+
+function RichTextRenderer({ text }: { text: string }) {
+  const lines = text.split(/\r?\n/);
+  const elements: JSX.Element[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith("```")) {
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length && lines[i].trim().startsWith("```")) {
+        i++;
+      }
+      elements.push(
+        <pre
+          key={`code-${i}`}
+          className="mb-4 overflow-x-auto rounded bg-secondary p-4 text-sm"
+        >
+          <code className="font-mono">{codeLines.join("\n")}</code>
+        </pre>
+      );
+      continue;
+    }
+
+    if (/^#{1,3}\s+/.test(line)) {
+      const level = line.match(/^#{1,3}/)![0].length;
+      const content = line.replace(/^#{1,3}\s+/, "");
+      const size =
+        level === 1 ? "text-2xl" : level === 2 ? "text-xl" : "text-lg";
+      elements.push(
+        <h3 key={`h-${i}`} className={`mb-2 font-semibold ${size}`}>
+          {content}
+        </h3>
+      );
+      i++;
+      continue;
+    }
+
+    if (/^\s*\d+[\.\)]\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\s*\d+[\.\)]\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*\d+[\.\)]\s+/, ""));
+        i++;
+      }
+      elements.push(
+        <ol key={`ol-${i}`} className="mb-4 list-decimal space-y-1 pl-6">
+          {items.map((it, idx) => (
+            <li key={idx} className="text-muted-foreground">
+              {it}
+            </li>
+          ))}
+        </ol>
+      );
+      continue;
+    }
+
+    if (/^\s*[-•]\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\s*[-•]\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*[-•]\s+/, ""));
+        i++;
+      }
+      elements.push(
+        <ul key={`ul-${i}`} className="mb-4 list-disc space-y-1 pl-6">
+          {items.map((it, idx) => (
+            <li key={idx} className="text-muted-foreground">
+              {it}
+            </li>
+          ))}
+        </ul>
+      );
+      continue;
+    }
+
+    if (trimmed === "") {
+      i++;
+      continue;
+    }
+
+    const parts = line.split(/(`[^`]+`)/g);
+    elements.push(
+      <p key={`p-${i}`} className="mb-3 text-muted-foreground">
+        {parts.map((part, idx) =>
+          part.startsWith("`") ? (
+            <code
+              key={idx}
+              className="rounded bg-secondary px-1 py-0.5 font-mono text-[0.9em]"
+            >
+              {part.slice(1, -1)}
+            </code>
+          ) : (
+            part
+          )
+        )}
+      </p>
+    );
+    i++;
+  }
+
+  return <div>{elements}</div>;
 }
 
 export default async function AssignmentDetailPage({ params }: PageProps) {
-  const { id } = await params
-  const supabase = await createClient()
+  const { id } = await params;
+  const supabase = await createClient();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login")
+    redirect("/auth/login");
   }
 
   const { data: assignment } = await supabase
     .from("assignments")
     .select("*, lessons(id, title, module_id, modules(id, title, order_index))")
     .eq("id", id)
-    .single()
+    .single();
 
   if (!assignment) {
-    notFound()
+    notFound();
   }
 
-  const { data: allModules } = await supabase.from("modules").select("*").eq("is_published", true).order("order_index")
+  const { data: allModules } = await supabase
+    .from("modules")
+    .select("*")
+    .eq("is_published", true)
+    .order("order_index");
 
   const { data: quizAttempts } = await supabase
     .from("quiz_attempts")
     .select("*, quizzes(module_id)")
-    .eq("user_id", user.id)
+    .eq("user_id", user.id);
 
-  const moduleIndex = allModules?.findIndex((m) => m.id === assignment.lessons?.modules?.id) ?? 0
-  let isUnlocked = moduleIndex === 0
+  const moduleIndex =
+    allModules?.findIndex((m) => m.id === assignment.lessons?.modules?.id) ?? 0;
+  let isUnlocked = moduleIndex === 0;
 
   if (moduleIndex > 0) {
-    const prevModule = allModules![moduleIndex - 1]
+    const prevModule = allModules![moduleIndex - 1];
     const prevModuleAttempts = quizAttempts?.filter(
       (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
-        a.quizzes?.module_id === prevModule.id && a.passed,
-    )
-    isUnlocked = prevModuleAttempts && prevModuleAttempts.length > 0
+        a.quizzes?.module_id === prevModule.id && a.passed
+    );
+    isUnlocked = prevModuleAttempts && prevModuleAttempts.length > 0;
   }
 
   if (!isUnlocked) {
-    redirect("/dashboard/assignments")
+    redirect("/dashboard/assignments");
   }
 
   const { data: submission } = await supabase
     .from("submissions")
-    .select("*, graded_by_profile:profiles!submissions_graded_by_fkey(full_name)")
+    .select(
+      "*, graded_by_profile:profiles!submissions_graded_by_fkey(full_name)"
+    )
     .eq("assignment_id", id)
     .eq("user_id", user.id)
-    .single()
+    .single();
 
   return (
     <div className="p-8">
@@ -82,12 +197,16 @@ export default async function AssignmentDetailPage({ params }: PageProps) {
               </div>
               <div className="flex-1">
                 {assignment.lessons?.modules && (
-                  <p className="text-sm text-muted-foreground">{assignment.lessons.modules.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {assignment.lessons.modules.title}
+                  </p>
                 )}
                 <h1 className="text-2xl font-bold">{assignment.title}</h1>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold">{assignment.points || assignment.max_score}</p>
+                <p className="text-2xl font-bold">
+                  {assignment.points || assignment.max_score}
+                </p>
                 <p className="text-sm text-muted-foreground">puntos</p>
               </div>
             </div>
@@ -103,51 +222,11 @@ export default async function AssignmentDetailPage({ params }: PageProps) {
           {assignment.instructions && (
             <div className="border border-border bg-card p-6">
               <h2 className="mb-4 text-lg font-semibold">Instrucciones</h2>
-              <div className="prose prose-sm prose-neutral max-w-none">
-                <p className="whitespace-pre-wrap text-muted-foreground">{assignment.instructions}</p>
+              <div className="max-w-none">
+                <RichTextRenderer text={assignment.instructions} />
               </div>
             </div>
           )}
-
-          {/* Submission guidelines */}
-          <div className="border border-border bg-card p-6">
-            <h2 className="mb-4 text-lg font-semibold">Formas de entrega</h2>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {assignment.accepts_file_upload && (
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center bg-secondary">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Archivo</p>
-                    <p className="text-xs text-muted-foreground">PDF, ZIP</p>
-                  </div>
-                </div>
-              )}
-              {assignment.accepts_github_link && (
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center bg-secondary">
-                    <Github className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium">GitHub</p>
-                    <p className="text-xs text-muted-foreground">Repositorio</p>
-                  </div>
-                </div>
-              )}
-              {assignment.accepts_production_url && (
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center bg-secondary">
-                    <Globe className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium">URL</p>
-                    <p className="text-xs text-muted-foreground">Deploy/Demo</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Sidebar - Submission */}
@@ -175,19 +254,32 @@ export default async function AssignmentDetailPage({ params }: PageProps) {
           {/* Submission status or form */}
           {submission ? (
             <>
-              <SubmissionStatus submission={submission} maxScore={assignment.max_score} />
+              <SubmissionStatus
+                submission={submission}
+                maxScore={assignment.max_score}
+              />
               {submission.is_approved === false && (
                 <div className="mt-8 border-t border-border pt-8">
-                  <h3 className="mb-4 text-lg font-semibold">Nueva Entrega/Corrección</h3>
-                  <SubmissionForm assignmentId={assignment.id} userId={user.id} existingSubmission={submission} />
+                  <h3 className="mb-4 text-lg font-semibold">
+                    Nueva Entrega/Corrección
+                  </h3>
+                  <SubmissionForm
+                    assignmentId={assignment.id}
+                    userId={user.id}
+                    existingSubmission={submission}
+                  />
                 </div>
               )}
             </>
           ) : (
-            <SubmissionForm assignmentId={assignment.id} userId={user.id} existingSubmission={submission} />
+            <SubmissionForm
+              assignmentId={assignment.id}
+              userId={user.id}
+              existingSubmission={submission}
+            />
           )}
         </div>
       </div>
     </div>
-  )
+  );
 }

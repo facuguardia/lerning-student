@@ -1,84 +1,215 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect, notFound } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, FileText, Clock, ExternalLink, CheckCircle, XCircle } from "lucide-react"
+import { createClient } from "@/lib/supabase/server";
+import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  ArrowLeft,
+  FileText,
+  Clock,
+  ExternalLink,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
+}
+
+function RichTextRenderer({ text }: { text: string }) {
+  const lines = text.split(/\r?\n/);
+  const elements: JSX.Element[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith("```")) {
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length && lines[i].trim().startsWith("```")) {
+        i++;
+      }
+      elements.push(
+        <pre
+          key={`code-${i}`}
+          className="mb-4 overflow-x-auto rounded bg-secondary p-4 text-sm"
+        >
+          <code className="font-mono">{codeLines.join("\n")}</code>
+        </pre>
+      );
+      continue;
+    }
+
+    if (/^#{1,3}\s+/.test(line)) {
+      const level = line.match(/^#{1,3}/)![0].length;
+      const content = line.replace(/^#{1,3}\s+/, "");
+      const size =
+        level === 1 ? "text-2xl" : level === 2 ? "text-xl" : "text-lg";
+      elements.push(
+        <h3 key={`h-${i}`} className={`mb-2 font-semibold ${size}`}>
+          {content}
+        </h3>
+      );
+      i++;
+      continue;
+    }
+
+    if (/^\s*\d+[\.\)]\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\s*\d+[\.\)]\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*\d+[\.\)]\s+/, ""));
+        i++;
+      }
+      elements.push(
+        <ol key={`ol-${i}`} className="mb-4 list-decimal space-y-1 pl-6">
+          {items.map((it, idx) => (
+            <li key={idx} className="text-muted-foreground">
+              {it}
+            </li>
+          ))}
+        </ol>
+      );
+      continue;
+    }
+
+    if (/^\s*[-•]\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\s*[-•]\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*[-•]\s+/, ""));
+        i++;
+      }
+      elements.push(
+        <ul key={`ul-${i}`} className="mb-4 list-disc space-y-1 pl-6">
+          {items.map((it, idx) => (
+            <li key={idx} className="text-muted-foreground">
+              {it}
+            </li>
+          ))}
+        </ul>
+      );
+      continue;
+    }
+
+    if (trimmed === "") {
+      i++;
+      continue;
+    }
+
+    const parts = line.split(/(`[^`]+`)/g);
+    elements.push(
+      <p key={`p-${i}`} className="mb-3 text-muted-foreground">
+        {parts.map((part, idx) =>
+          part.startsWith("`") ? (
+            <code
+              key={idx}
+              className="rounded bg-secondary px-1 py-0.5 font-mono text-[0.9em]"
+            >
+              {part.slice(1, -1)}
+            </code>
+          ) : (
+            part
+          )
+        )}
+      </p>
+    );
+    i++;
+  }
+
+  return <div>{elements}</div>;
 }
 
 export default async function LessonDetailPage({ params }: PageProps) {
-  const { id } = await params
-  const supabase = await createClient()
+  const { id } = await params;
+  const supabase = await createClient();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login")
+    redirect("/auth/login");
   }
 
   // Fetch lesson with module and assignment info
-  const { data: lesson } = await supabase.from("lessons").select("*, modules(*), assignments(*)").eq("id", id).single()
+  const { data: lesson } = await supabase
+    .from("lessons")
+    .select("*, modules(*), assignments(*)")
+    .eq("id", id)
+    .single();
 
   if (!lesson) {
-    notFound()
+    notFound();
   }
 
   // Check if user has access to this module
-  const { data: allModules } = await supabase.from("modules").select("*").eq("is_published", true).order("order_index")
-  const moduleIndex = allModules?.findIndex((m) => m.id === lesson.module_id) ?? 0
+  const { data: allModules } = await supabase
+    .from("modules")
+    .select("*")
+    .eq("is_published", true)
+    .order("order_index");
+  const moduleIndex =
+    allModules?.findIndex((m) => m.id === lesson.module_id) ?? 0;
 
   // Fetch quiz attempts to verify unlock status
   const { data: quizAttempts } = await supabase
     .from("quiz_attempts")
     .select("*, quizzes(module_id)")
-    .eq("user_id", user.id)
+    .eq("user_id", user.id);
 
-  let arePrevModuleAssignmentsApproved = true
-  let isModuleUnlocked = moduleIndex === 0
+  let arePrevModuleAssignmentsApproved = true;
+  let isModuleUnlocked = moduleIndex === 0;
   if (moduleIndex > 0) {
-    const prevModule = allModules![moduleIndex - 1]
+    const prevModule = allModules![moduleIndex - 1];
     const { data: prevAssignments } = await supabase
       .from("assignments")
       .select("id, lessons(module_id)")
-      .eq("lessons.module_id", prevModule.id)
-    const prevAssignmentIds = prevAssignments?.map((a: any) => a.id) || []
+      .eq("lessons.module_id", prevModule.id);
+    const prevAssignmentIds = prevAssignments?.map((a: any) => a.id) || [];
     if (prevAssignmentIds.length > 0) {
       const { data: userPrevSubmissions } = await supabase
         .from("submissions")
         .select("assignment_id, is_approved")
         .eq("user_id", user.id)
-        .in("assignment_id", prevAssignmentIds)
-      arePrevModuleAssignmentsApproved = prevAssignmentIds.every((assignmentId: string) => {
-        const submission = userPrevSubmissions?.find((s: any) => s.assignment_id === assignmentId)
-        return submission?.is_approved === true
-      })
+        .in("assignment_id", prevAssignmentIds);
+      arePrevModuleAssignmentsApproved = prevAssignmentIds.every(
+        (assignmentId: string) => {
+          const submission = userPrevSubmissions?.find(
+            (s: any) => s.assignment_id === assignmentId
+          );
+          return submission?.is_approved === true;
+        }
+      );
     }
     const prevModuleAttempts = quizAttempts?.filter(
       (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
-        a.quizzes?.module_id === prevModule.id && a.passed,
-    )
-    isModuleUnlocked = !!prevModuleAttempts && prevModuleAttempts.length > 0 && arePrevModuleAssignmentsApproved
+        a.quizzes?.module_id === prevModule.id && a.passed
+    );
+    isModuleUnlocked =
+      !!prevModuleAttempts &&
+      prevModuleAttempts.length > 0 &&
+      arePrevModuleAssignmentsApproved;
   }
 
   if (!isModuleUnlocked) {
-    redirect("/dashboard/modules")
+    redirect("/dashboard/modules");
   }
 
   // Fetch submission if there's an assignment
-  const assignment = lesson.assignments?.[0]
-  let submission = null
+  const assignment = lesson.assignments?.[0];
+  let submission = null;
   if (assignment) {
     const { data: submissionData } = await supabase
       .from("submissions")
       .select("*")
       .eq("user_id", user.id)
       .eq("assignment_id", assignment.id)
-      .single()
-    submission = submissionData
+      .single();
+    submission = submissionData;
   }
 
   return (
@@ -94,9 +225,13 @@ export default async function LessonDetailPage({ params }: PageProps) {
 
       {/* Lesson header */}
       <div className="mb-8 border-b border-border pb-8">
-        <div className="mb-2 text-sm text-muted-foreground">{lesson.modules.title}</div>
+        <div className="mb-2 text-sm text-muted-foreground">
+          {lesson.modules.title}
+        </div>
         <h1 className="text-3xl font-bold tracking-tight">{lesson.title}</h1>
-        {lesson.description && <p className="mt-2 text-muted-foreground">{lesson.description}</p>}
+        {lesson.description && (
+          <p className="mt-2 text-muted-foreground">{lesson.description}</p>
+        )}
         {lesson.duration_minutes && (
           <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
@@ -110,11 +245,16 @@ export default async function LessonDetailPage({ params }: PageProps) {
         <div className="lg:col-span-2 space-y-8">
           {/* Lesson content */}
           <div className="border border-border bg-card p-6">
-            <h2 className="mb-4 text-xl font-semibold">Contenido de la Clase</h2>
-            <div className="prose prose-neutral max-w-none">
-              <div className="whitespace-pre-wrap text-foreground">
-                {lesson.content || "El contenido de esta clase estará disponible pronto."}
-              </div>
+            <h2 className="mb-4 text-xl font-semibold">
+              Contenido de la Clase
+            </h2>
+            <div className="max-w-none">
+              <RichTextRenderer
+                text={
+                  lesson.content ||
+                  "El contenido de esta clase estará disponible pronto."
+                }
+              />
             </div>
           </div>
 
@@ -145,11 +285,15 @@ export default async function LessonDetailPage({ params }: PageProps) {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold">Trabajo Práctico</h3>
-                  <p className="text-xs text-muted-foreground">{assignment.max_score} puntos</p>
+                  <p className="text-xs text-muted-foreground">
+                    {assignment.max_score} puntos
+                  </p>
                 </div>
               </div>
 
-              <p className="mb-4 text-sm text-muted-foreground">{assignment.title}</p>
+              <p className="mb-4 text-sm text-muted-foreground">
+                {assignment.title}
+              </p>
 
               {/* Submission status */}
               {submission && (
@@ -179,14 +323,19 @@ export default async function LessonDetailPage({ params }: PageProps) {
               )}
 
               <Link href={`/dashboard/assignments/${assignment.id}`}>
-                <Button className="w-full" variant={submission?.status === "approved" ? "outline" : "default"}>
+                <Button
+                  className="w-full"
+                  variant={
+                    submission?.status === "approved" ? "outline" : "default"
+                  }
+                >
                   {submission?.status === "approved"
                     ? "Ver entrega"
                     : submission?.status === "rejected"
-                      ? "Volver a entregar"
-                      : submission?.status === "submitted"
-                        ? "Ver estado"
-                        : "Entregar trabajo"}
+                    ? "Volver a entregar"
+                    : submission?.status === "submitted"
+                    ? "Ver estado"
+                    : "Entregar trabajo"}
                 </Button>
               </Link>
             </div>
@@ -195,12 +344,12 @@ export default async function LessonDetailPage({ params }: PageProps) {
           {/* Navigation hint */}
           <div className="border border-border bg-card p-6">
             <p className="text-sm text-muted-foreground">
-              Después de entregar el trabajo práctico, puedes continuar con la siguiente clase mientras esperas la
-              corrección.
+              Después de entregar el trabajo práctico, puedes continuar con la
+              siguiente clase mientras esperas la corrección.
             </p>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -33,9 +33,16 @@ export function SubmissionForm({ assignmentId, userId, existingSubmission }: Sub
     const selectedFile = e.target.files?.[0]
     if (selectedFile) {
       // Check file type
-      const validTypes = ["application/pdf", "application/zip", "application/x-zip-compressed"]
+      const validTypes = [
+        "application/pdf",
+        "application/zip",
+        "application/x-zip-compressed",
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+      ]
       if (!validTypes.includes(selectedFile.type)) {
-        setError("Solo se permiten archivos PDF o ZIP")
+        setError("Solo se permiten PDF, ZIP o imágenes (PNG/JPG/WEBP)")
         return
       }
       // Check file size (max 10MB)
@@ -173,7 +180,7 @@ export function SubmissionForm({ assignmentId, userId, existingSubmission }: Sub
 
         {/* File upload */}
         <div className="space-y-2">
-          <Label>Archivo (PDF o ZIP)</Label>
+          <Label>Archivo (PDF, ZIP o imagen)</Label>
           <div className="border border-dashed border-input p-4">
             {file ? (
               <div className="flex items-center justify-between">
@@ -190,8 +197,13 @@ export function SubmissionForm({ assignmentId, userId, existingSubmission }: Sub
               <label className="flex cursor-pointer flex-col items-center gap-2">
                 <Upload className="h-8 w-8 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Haz clic para subir</span>
-                <span className="text-xs text-muted-foreground">PDF, ZIP (máx. 10MB)</span>
-                <input type="file" accept=".pdf,.zip" onChange={handleFileChange} className="hidden" />
+                <span className="text-xs text-muted-foreground">PDF, ZIP, PNG, JPG, WEBP (máx. 10MB)</span>
+                <input
+                  type="file"
+                  accept=".pdf,.zip,.png,.jpg,.jpeg,.webp"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
               </label>
             )}
           </div>
