@@ -16,6 +16,7 @@ import {
   Users,
   ClipboardList,
   Code2,
+  MessageSquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Profile } from "@/lib/types"
@@ -54,6 +55,7 @@ export function Sidebar({ profile }: SidebarProps) {
     { href: "/admin/final-projects", label: "Proyectos Finales", icon: Code2 },
     { href: "/admin/students", label: "Estudiantes", icon: Users },
     { href: "/admin/grading", label: "Calificaciones", icon: Award },
+    { href: "/admin/chat", label: "Chat", icon: MessageSquare },
   ]
 
   const links = isAdmin ? adminLinks : studentLinks

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ArrowLeft, FileText, Github, Globe, Calendar } from "lucide-react";
 import { SubmissionForm } from "@/components/assignments/submission-form";
 import { SubmissionStatus } from "@/components/assignments/submission-status";
+import { AssignmentChat } from "@/components/chat/assignment-chat";
+import type React from "react";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -11,7 +13,7 @@ interface PageProps {
 
 function RichTextRenderer({ text }: { text: string }) {
   const lines = text.split(/\r?\n/);
-  const elements: JSX.Element[] = [];
+  const elements: React.ReactNode[] = [];
   let i = 0;
 
   while (i < lines.length) {
@@ -160,7 +162,7 @@ export default async function AssignmentDetailPage({ params }: PageProps) {
       (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
         a.quizzes?.module_id === prevModule.id && a.passed
     );
-    isUnlocked = prevModuleAttempts && prevModuleAttempts.length > 0;
+    isUnlocked = !!prevModuleAttempts && prevModuleAttempts.length > 0;
   }
 
   if (!isUnlocked) {
@@ -278,6 +280,16 @@ export default async function AssignmentDetailPage({ params }: PageProps) {
               existingSubmission={submission}
             />
           )}
+
+          {/* Chat with admin */}
+          <div className="mt-8">
+            <AssignmentChat
+              assignmentId={assignment.id}
+              userId={user.id}
+              currentUserRole="student"
+              isClosed={submission?.is_approved === true}
+            />
+          </div>
         </div>
       </div>
     </div>

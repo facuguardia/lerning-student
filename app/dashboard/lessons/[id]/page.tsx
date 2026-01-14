@@ -11,13 +11,15 @@ import {
   XCircle,
 } from "lucide-react";
 
+import type React from "react";
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 function RichTextRenderer({ text }: { text: string }) {
   const lines = text.split(/\r?\n/);
-  const elements: JSX.Element[] = [];
+  const elements: React.ReactNode[] = [];
   let i = 0;
 
   while (i < lines.length) {

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { ArrowLeft, MessageSquare, User } from "lucide-react"
 import { GradingForm } from "@/components/admin/grading-form"
 import { SubmissionViewer } from "@/components/admin/submission-viewer"
+import { AssignmentChat } from "@/components/chat/assignment-chat"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -94,6 +95,13 @@ export default async function GradeSubmissionPage({ params }: PageProps) {
             </p>
           </div>
 
+          {/* Chat with student */}
+          <AssignmentChat
+            assignmentId={submission.assignments.id}
+            userId={submission.profiles.id}
+            currentUserRole="admin"
+            isClosed={submission.is_approved === true}
+          />
 
           {/* Assignment instructions */}
           {submission.assignments.instructions && (
