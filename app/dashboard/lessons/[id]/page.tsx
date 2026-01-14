@@ -215,15 +215,77 @@ export default async function LessonDetailPage({ params }: PageProps) {
           {lesson.video_url && (
             <div className="border border-border bg-card p-6">
               <h2 className="mb-4 text-xl font-semibold">Video de la Clase</h2>
-              <a
-                href={lesson.video_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-accent hover:underline"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Abrir video
-              </a>
+              <Button variant="outline" asChild className="gap-2">
+                <a
+                  href={lesson.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Abrir video
+                </a>
+              </Button>
+            </div>
+          )}
+
+          {/* Attached resources */}
+          {(lesson.pdf_url ||
+            (Array.isArray(lesson.resource_links) &&
+              lesson.resource_links.length > 0)) && (
+            <div className="border border-border bg-card p-6">
+              <h2 className="mb-4 text-xl font-semibold">Recursos Adjuntos</h2>
+              <div className="space-y-3">
+                {lesson.pdf_url && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      <span>PDF de la clase</span>
+                    </div>
+                    <Button variant="outline" asChild className="gap-2">
+                      <a
+                        href={lesson.pdf_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Abrir PDF
+                      </a>
+                    </Button>
+                  </div>
+                )}
+                {Array.isArray(lesson.resource_links) &&
+                  lesson.resource_links.length > 0 && (
+                    <div>
+                      <div className="mb-2 font-medium">Enlaces</div>
+                      <ul className="space-y-2">
+                        {lesson.resource_links.map(
+                          (url: string, idx: number) => (
+                            <li
+                              key={idx}
+                              className="flex items-center justify-between"
+                            >
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <ExternalLink className="h-4 w-4" />
+                                <span className="truncate max-w-[70%]">
+                                  {url}
+                                </span>
+                              </div>
+                              <Button variant="outline" asChild>
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Abrir
+                                </a>
+                              </Button>
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
+              </div>
             </div>
           )}
         </div>

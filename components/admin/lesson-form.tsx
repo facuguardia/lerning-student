@@ -20,6 +20,8 @@ interface Lesson {
   description: string | null
   content: string | null
   video_url: string | null
+  pdf_url: string | null
+  resource_links: string[] | null
   order_index: number
   duration_minutes: number | null
   is_published: boolean
@@ -39,6 +41,11 @@ export function LessonForm({ moduleId, lesson }: LessonFormProps) {
     description: lesson?.description || "",
     content: lesson?.content || "",
     video_url: lesson?.video_url || "",
+    pdf_url: lesson?.pdf_url || "",
+    resourceLinksText:
+      Array.isArray(lesson?.resource_links) && lesson?.resource_links?.length
+        ? (lesson?.resource_links || []).join("\n")
+        : "",
     order_index: lesson?.order_index || 1,
     duration_minutes: lesson?.duration_minutes || null,
     is_published: lesson?.is_published || false,
@@ -49,12 +56,26 @@ export function LessonForm({ moduleId, lesson }: LessonFormProps) {
     setLoading(true)
 
     try {
+      const resourceLinks =
+        formData.resourceLinksText
+          .split("\n")
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0) || []
+
       if (lesson) {
         // Update existing lesson
         const { error } = await supabase
           .from("lessons")
           .update({
-            ...formData,
+            title: formData.title,
+            description: formData.description || null,
+            content: formData.content || null,
+            video_url: formData.video_url || null,
+            pdf_url: formData.pdf_url || null,
+            resource_links: resourceLinks.length ? resourceLinks : null,
+            order_index: formData.order_index,
+            duration_minutes: formData.duration_minutes,
+            is_published: formData.is_published,
             updated_at: new Date().toISOString(),
           })
           .eq("id", lesson.id)
@@ -64,7 +85,15 @@ export function LessonForm({ moduleId, lesson }: LessonFormProps) {
         // Create new lesson
         const { error } = await supabase.from("lessons").insert([
           {
-            ...formData,
+            title: formData.title,
+            description: formData.description || null,
+            content: formData.content || null,
+            video_url: formData.video_url || null,
+            pdf_url: formData.pdf_url || null,
+            resource_links: resourceLinks.length ? resourceLinks : null,
+            order_index: formData.order_index,
+            duration_minutes: formData.duration_minutes,
+            is_published: formData.is_published,
             module_id: moduleId,
           },
         ])
@@ -126,6 +155,34 @@ export function LessonForm({ moduleId, lesson }: LessonFormProps) {
           onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
           placeholder="https://youtube.com/watch?v=..."
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="pdf_url">PDF de la Clase (opcional)</Label>
+        <Input
+          id="pdf_url"
+          type="url"
+          value={formData.pdf_url}
+          onChange={(e) => setFormData({ ...formData, pdf_url: e.target.value })}
+          placeholder="https://example.com/diapositivas.pdf"
+        />
+        <p className="text-sm text-muted-foreground">
+          Comparte documentación o diapositivas en PDF.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="resource_links">Enlaces de Recursos (opcional)</Label>
+        <Textarea
+          id="resource_links"
+          value={formData.resourceLinksText}
+          onChange={(e) => setFormData({ ...formData, resourceLinksText: e.target.value })}
+          placeholder={"https://docs...\nhttps://blog...\nhttps://github..."}
+          rows={4}
+        />
+        <p className="text-sm text-muted-foreground">
+          Ingresa un enlace por línea. Se mostrarán como recursos adjuntos.
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

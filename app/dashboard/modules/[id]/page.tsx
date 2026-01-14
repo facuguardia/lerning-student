@@ -32,6 +32,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
     .from("modules")
     .select("*, lessons(*, assignments(*))")
     .eq("id", id)
+    .order("order_index", { foreignTable: "lessons" })
     .single();
 
   if (!module) {
@@ -165,11 +166,14 @@ export default async function ModuleDetailPage({ params }: PageProps) {
               const submission = assignment
                 ? submissions?.find((s) => s.assignment_id === assignment.id)
                 : null;
+              const isApproved = submission?.is_approved === true;
 
               return (
                 <div
                   key={lesson.id}
-                  className="border border-border bg-card p-6"
+                  className={`border border-border bg-card p-6 ${
+                    isApproved ? "opacity-60" : ""
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex gap-4 flex-1">
