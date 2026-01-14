@@ -61,6 +61,28 @@ export function Sidebar({ profile }: SidebarProps) {
   const links = isAdmin ? adminLinks : studentLinks;
   const [quizzesOpen, setQuizzesOpen] = useState(false);
 
+  const getInitials = (fullName?: string, email?: string) => {
+    const name = (fullName || "").trim();
+    if (name.length > 0) {
+      const parts = name.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+      }
+      const first = parts[0];
+      return first.slice(0, 2).toUpperCase();
+    }
+    const mail = (email || "").trim();
+    const local = mail.split("@")[0] || "";
+    if (local.length > 0) {
+      const tokens = local.split(/[._-]+/).filter(Boolean);
+      if (tokens.length >= 2) {
+        return (tokens[0][0] + tokens[1][0]).toUpperCase();
+      }
+      return local.slice(0, 2).toUpperCase();
+    }
+    return "U";
+  };
+
   useEffect(() => {
     const openByRoute =
       pathname.startsWith("/admin/quizzes") || pathname === "/admin/final-quiz";
@@ -117,18 +139,32 @@ export function Sidebar({ profile }: SidebarProps) {
                     </svg>
                   </button>
                   {quizzesOpen && (
-                    <Link
-                      href="/admin/final-quiz"
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors pl-8 rounded-md",
-                        pathname === "/admin/final-quiz"
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                      )}
-                    >
-                      <ClipboardList className="h-4 w-4" />
-                      Quiz Final
-                    </Link>
+                    <>
+                      <Link
+                        href="/admin/quizzes"
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors pl-8 rounded-md",
+                          pathname === "/admin/quizzes"
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                        )}
+                      >
+                        <ClipboardList className="h-4 w-4" />
+                        Gestionar Quizzes
+                      </Link>
+                      <Link
+                        href="/admin/final-quiz"
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors pl-8 rounded-md",
+                          pathname === "/admin/final-quiz"
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                        )}
+                      >
+                        <ClipboardList className="h-4 w-4" />
+                        Quiz Final
+                      </Link>
+                    </>
                   )}
                 </>
               ) : (
@@ -154,7 +190,10 @@ export function Sidebar({ profile }: SidebarProps) {
       <div className="border-t border-sidebar-border p-4">
         <div className="mb-3 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center bg-sidebar-accent text-sm font-medium uppercase">
-            {profile.full_name?.[0] || profile.email[0]}
+            {getInitials(
+              profile.full_name ?? undefined,
+              profile.email ?? undefined
+            )}
           </div>
           <div className="flex-1 overflow-hidden">
             <p className="truncate text-sm font-medium">
