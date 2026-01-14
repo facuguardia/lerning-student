@@ -57,7 +57,7 @@ export default function HomePage() {
             <div className="grid grid-cols-2 gap-4">
               <FeatureCard
                 icon={<BookOpen className="h-6 w-6" />}
-                title="5 Módulos"
+                title="Módulos"
                 description="Contenido estructurado desde fundamentos hasta producción"
               />
               <FeatureCard
