@@ -39,10 +39,10 @@ export function Sidebar({ profile }: SidebarProps) {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard/modules", label: "Módulos", icon: BookOpen },
     { href: "/dashboard/assignments", label: "Trabajos", icon: FileText },
-    { href: "/dashboard/grades", label: "Calificaciones", icon: Award },
+    // { href: "/dashboard/grades", label: "Calificaciones", icon: Award },
     { href: "/dashboard/final-project", label: "Proyecto Final", icon: Code2 },
     { href: "/dashboard/final-quiz", label: "Quiz Final", icon: ClipboardList },
-    { href: "/dashboard/certificate", label: "Certificado", icon: GraduationCap },
+    // { href: "/dashboard/certificate", label: "Certificado", icon: GraduationCap },
   ]
 
   const adminLinks = [

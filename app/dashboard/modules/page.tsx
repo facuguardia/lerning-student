@@ -53,8 +53,16 @@ export default async function ModulesPage() {
   }
 
   const isModuleCompleted = (moduleId: string) => {
+    // Check explicit progress record
     const progress = moduleProgress?.find((p) => p.module_id === moduleId)
-    return progress?.completed_at !== null
+    if (progress?.completed_at) return true
+
+    // Fallback: Check if user passed the quiz for this module
+    const attempts = quizAttempts?.filter(
+      (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
+        a.quizzes?.module_id === moduleId && a.passed,
+    )
+    return !!attempts && attempts.length > 0
   }
 
   const completedModules = moduleStates.filter((m) => isModuleCompleted(m.id)).length
