@@ -33,6 +33,7 @@ export function AssignmentChat({
   const [error, setError] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [closed, setClosed] = useState<boolean>(isClosed);
+  const [assignmentTitle, setAssignmentTitle] = useState<string | null>(null);
 
   const canWrite = useMemo(() => !closed, [closed]);
 
@@ -86,6 +87,18 @@ export function AssignmentChat({
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignmentId, userId]);
+
+  useEffect(() => {
+    (async () => {
+      const { data: assignment } = await supabase
+        .from("assignments")
+        .select("title")
+        .eq("id", assignmentId)
+        .single();
+      setAssignmentTitle(assignment?.title ?? null);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignmentId]);
 
   // Realtime disabled: actualización manual mediante botón "Actualizar"
 
@@ -155,36 +168,53 @@ export function AssignmentChat({
   const handleDownloadPdf = () => {
     const w = window.open("", "_blank");
     if (!w) return;
-    const title = "Historial de chat - Trabajo Práctico";
+    const pdfTitle = assignmentTitle
+      ? `Chat - Trabajo Práctico: ${assignmentTitle}`
+      : "Historial de chat - Trabajo Práctico";
     const styles = `
       <style>
-        body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
-        h1 { font-size: 20px; margin-bottom: 16px; }
-        .meta { font-size: 12px; color: #555; margin-bottom: 16px; }
-        .msg { border-bottom: 1px solid #eee; padding: 8px 0; }
+        body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color: #0a0a0a; background: #fff; padding: 32px; }
+        .container { max-width: 880px; margin: 0 auto; }
+        h1 { font-size: 22px; margin: 0 0 12px; }
+        .meta { font-size: 13px; color: #444; margin-bottom: 18px; }
+        .msg { border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+        .msg-admin { background: #f5f8ff; border: 1px solid #dbe7ff; }
+        .msg-student { background: #f9f9f9; border: 1px solid #eaeaea; }
         .msg .who { font-weight: 600; }
         .msg .time { font-size: 11px; color: #777; }
-        .msg .content { margin-top: 4px; white-space: pre-wrap; }
+        .msg .content { margin-top: 6px; white-space: pre-wrap; }
+        @media print {
+          body { padding: 0; }
+          .container { margin: 0; }
+        }
       </style>
     `;
     const html = `
       <html>
         <head>
-          <title>${title}</title>
+          <title>${pdfTitle}</title>
           ${styles}
         </head>
         <body>
-          <h1>${title}</h1>
-          <div class="meta">Assignment ID: ${assignmentId} · Student ID: ${userId}</div>
-          ${messages
-            .map((m) => {
-              const who =
-                m.sender_role === "admin" ? "Administrador" : "Alumno";
-              const time = new Date(m.created_at).toLocaleString("es-ES");
-              const content = escapeHtml(m.content);
-              return `<div class="msg"><div class="who">${who}</div><div class="time">${time}</div><div class="content">${content}</div></div>`;
-            })
-            .join("")}
+          <div class="container">
+            <h1>${pdfTitle}</h1>
+            ${
+              assignmentTitle
+                ? `<div class="meta">${escapeHtml(assignmentTitle)}</div>`
+                : ""
+            }
+            ${messages
+              .map((m) => {
+                const who =
+                  m.sender_role === "admin" ? "Administrador" : "Alumno";
+                const time = new Date(m.created_at).toLocaleString("es-ES");
+                const content = escapeHtml(m.content);
+                const roleClass =
+                  m.sender_role === "admin" ? "msg-admin" : "msg-student";
+                return `<div class="msg ${roleClass}"><div class="who">${who}</div><div class="time">${time}</div><div class="content">${content}</div></div>`;
+              })
+              .join("")}
+          </div>
         </body>
       </html>
     `;
