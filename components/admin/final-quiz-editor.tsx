@@ -151,8 +151,8 @@ export function FinalQuizEditor({ quiz }: FinalQuizEditorProps) {
   };
 
   const validate = () => {
-    if (questions.length < 30) {
-      return "El quiz final debe tener al menos 30 preguntas";
+    if (questions.length < 1) {
+      return "El quiz final debe tener al menos 1 pregunta";
     }
     for (const q of questions) {
       if (!q.question_text.trim()) {
