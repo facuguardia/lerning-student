@@ -50,6 +50,7 @@ export function Sidebar({ profile }: SidebarProps) {
     { href: "/admin/modules", label: "Módulos", icon: BookOpen },
     { href: "/admin/assignments", label: "Trabajos Prácticos", icon: FileText },
     { href: "/admin/quizzes", label: "Quizzes", icon: ClipboardList },
+    { href: "/admin/final-quiz", label: "Quiz Final", icon: ClipboardList },
     { href: "/admin/final-projects", label: "Proyectos Finales", icon: Code2 },
     { href: "/admin/students", label: "Estudiantes", icon: Users },
     { href: "/admin/grading", label: "Calificaciones", icon: Award },
