@@ -1,9 +1,13 @@
 import type React from "react"
+import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { BookOpen, GraduationCap, Award, ArrowRight } from "lucide-react"
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient()
+  const { data: modules } = await supabase.from("modules").select("id").eq("is_published", true)
+  const moduleCount = modules?.length ?? 0
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -82,8 +86,8 @@ export default function HomePage() {
         {/* Stats */}
         <section className="border-y border-border bg-secondary/50">
           <div className="mx-auto grid max-w-7xl grid-cols-3 divide-x divide-border">
-            <StatBlock value="70%" label="Nota mínima para avanzar" />
-            <StatBlock value="5" label="Módulos completos" />
+            <StatBlock value="78%" label="Nota mínima para avanzar" />
+            <StatBlock value={`${moduleCount}`} label="Módulos publicados" />
             <StatBlock value="100%" label="Feedback personalizado" />
           </div>
         </section>
@@ -92,7 +96,17 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="mx-auto max-w-7xl px-6 text-center text-sm text-muted-foreground">
-          <p>Vibe Learning LMS — Sistema de Gestión de Aprendizaje</p>
+          <p>
+            Vibe Learning · Creado por{" "}
+            <a
+              href="https://www.facuguardia.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-muted-foreground no-underline hover:text-primary hover:no-underline"
+            >
+              Facu Guardia
+            </a>
+          </p>
         </div>
       </footer>
     </div>
