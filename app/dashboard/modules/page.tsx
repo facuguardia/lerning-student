@@ -59,26 +59,10 @@ export default async function ModulesPage() {
     });
   };
 
-  // Calculate which modules are unlocked
-  const moduleStates = (modules || []).map((module, index) => {
-    if (index === 0) {
-      return { ...module, isUnlocked: true };
-    }
-
-    const prevModule = modules![index - 1];
-    const prevModuleAttempts = quizAttempts?.filter(
-      (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
-        a.quizzes?.module_id === prevModule.id && a.passed
-    );
-
-    return {
-      ...module,
-      isUnlocked:
-        !!prevModuleAttempts &&
-        prevModuleAttempts.length > 0 &&
-        areModuleAssignmentsApproved(prevModule.id),
-    };
-  });
+  const moduleStates = (modules || []).map((module) => ({
+    ...module,
+    isUnlocked: true,
+  }));
 
   const getModuleQuizScore = (moduleId: string) => {
     const attempts = quizAttempts?.filter(

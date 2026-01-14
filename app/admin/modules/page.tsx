@@ -1,31 +1,44 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Plus, Edit, BookOpen, ClipboardList, FileText } from "lucide-react"
-import Link from "next/link"
-import { DeleteModuleButton } from "@/components/admin/delete-module-button"
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Plus,
+  SquarePen,
+  BookOpen,
+  ClipboardList,
+  FileText,
+} from "lucide-react";
+import Link from "next/link";
+import { DeleteModuleButton } from "@/components/admin/delete-module-button";
 
 export default async function AdminModulesPage() {
-  const supabase = await createClient()
+  const supabase = await createClient();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login")
+    redirect("/auth/login");
   }
 
   // Fetch modules with quiz and lessons counts
-  const { data: modules } = await supabase.from("modules").select("*, quizzes(id), lessons(id)").order("order_index")
+  const { data: modules } = await supabase
+    .from("modules")
+    .select("*, quizzes(id), lessons(id)")
+    .order("order_index");
 
   return (
     <div className="p-8">
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Módulos del Curso</h1>
-          <p className="mt-1 text-muted-foreground">Administra los módulos, clases y trabajos</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Módulos del Curso
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Administra los módulos, clases y trabajos
+          </p>
         </div>
         <Link href="/admin/modules/new">
           <Button className="gap-2">
@@ -48,21 +61,34 @@ export default async function AdminModulesPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-semibold">{module.title}</h3>
                     <span
-                      className={`px-2 py-0.5 text-xs font-medium ${module.is_published ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}
+                      className={`px-2 py-0.5 text-xs font-medium ${
+                        module.is_published
+                          ? "bg-success/10 text-success"
+                          : "bg-warning/10 text-warning"
+                      }`}
                     >
                       {module.is_published ? "Publicado" : "Borrador"}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{module.description}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {module.description}
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2">
                 <Link href={`/admin/modules/${module.id}`}>
-                  <Button variant="ghost" size="sm">
-                    <Edit className="h-4 w-4" />
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Editar módulo"
+                  >
+                    <SquarePen className="h-4 w-4" />
                   </Button>
                 </Link>
-                <DeleteModuleButton moduleId={module.id} moduleName={module.title} />
+                <DeleteModuleButton
+                  moduleId={module.id}
+                  moduleName={module.title}
+                />
               </div>
             </div>
 
@@ -84,5 +110,5 @@ export default async function AdminModulesPage() {
         ))}
       </div>
     </div>
-  )
+  );
 }

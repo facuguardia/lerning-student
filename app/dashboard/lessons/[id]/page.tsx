@@ -146,58 +146,11 @@ export default async function LessonDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Check if user has access to this module
   const { data: allModules } = await supabase
     .from("modules")
     .select("*")
     .eq("is_published", true)
     .order("order_index");
-  const moduleIndex =
-    allModules?.findIndex((m) => m.id === lesson.module_id) ?? 0;
-
-  // Fetch quiz attempts to verify unlock status
-  const { data: quizAttempts } = await supabase
-    .from("quiz_attempts")
-    .select("*, quizzes(module_id)")
-    .eq("user_id", user.id);
-
-  let arePrevModuleAssignmentsApproved = true;
-  let isModuleUnlocked = moduleIndex === 0;
-  if (moduleIndex > 0) {
-    const prevModule = allModules![moduleIndex - 1];
-    const { data: prevAssignments } = await supabase
-      .from("assignments")
-      .select("id, lessons(module_id)")
-      .eq("lessons.module_id", prevModule.id);
-    const prevAssignmentIds = prevAssignments?.map((a: any) => a.id) || [];
-    if (prevAssignmentIds.length > 0) {
-      const { data: userPrevSubmissions } = await supabase
-        .from("submissions")
-        .select("assignment_id, is_approved")
-        .eq("user_id", user.id)
-        .in("assignment_id", prevAssignmentIds);
-      arePrevModuleAssignmentsApproved = prevAssignmentIds.every(
-        (assignmentId: string) => {
-          const submission = userPrevSubmissions?.find(
-            (s: any) => s.assignment_id === assignmentId
-          );
-          return submission?.is_approved === true;
-        }
-      );
-    }
-    const prevModuleAttempts = quizAttempts?.filter(
-      (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
-        a.quizzes?.module_id === prevModule.id && a.passed
-    );
-    isModuleUnlocked =
-      !!prevModuleAttempts &&
-      prevModuleAttempts.length > 0 &&
-      arePrevModuleAssignmentsApproved;
-  }
-
-  if (!isModuleUnlocked) {
-    redirect("/dashboard/modules");
-  }
 
   // Fetch submission if there's an assignment
   const assignment = lesson.assignments?.[0];

@@ -1,99 +1,111 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect, notFound } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, PlayCircle, BookOpen, Lock, CheckCircle, Clock, XCircle } from "lucide-react"
+import { createClient } from "@/lib/supabase/server";
+import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  ArrowLeft,
+  PlayCircle,
+  BookOpen,
+  Lock,
+  CheckCircle,
+  Clock,
+  XCircle,
+} from "lucide-react";
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 export default async function ModuleDetailPage({ params }: PageProps) {
-  const { id } = await params
-  const supabase = await createClient()
+  const { id } = await params;
+  const supabase = await createClient();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login")
+    redirect("/auth/login");
   }
 
-  const { data: module } = await supabase.from("modules").select("*, lessons(*, assignments(*))").eq("id", id).single()
+  const { data: module } = await supabase
+    .from("modules")
+    .select("*, lessons(*, assignments(*))")
+    .eq("id", id)
+    .single();
 
   if (!module) {
-    notFound()
+    notFound();
   }
 
-  // Fetch all modules to check if this one is unlocked
-  const { data: allModules } = await supabase.from("modules").select("*").eq("is_published", true).order("order_index")
-
-  // Fetch quiz attempts
+  const { data: allModules } = await supabase
+    .from("modules")
+    .select("*")
+    .eq("is_published", true)
+    .order("order_index");
   const { data: quizAttempts } = await supabase
     .from("quiz_attempts")
     .select("*, quizzes(module_id)")
-    .eq("user_id", user.id)
-
-  const moduleIndex = allModules?.findIndex((m) => m.id === id) ?? 0
-  let isUnlocked = moduleIndex === 0
-
-  if (moduleIndex > 0) {
-    const prevModule = allModules![moduleIndex - 1]
-    const prevModuleAttempts = quizAttempts?.filter(
-      (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
-        a.quizzes?.module_id === prevModule.id && a.passed,
-    )
-    isUnlocked = !!(prevModuleAttempts && prevModuleAttempts.length > 0)
-  }
-
-  if (!isUnlocked) {
-    redirect("/dashboard/modules")
-  }
+    .eq("user_id", user.id);
+  const moduleIndex = allModules?.findIndex((m) => m.id === id) ?? 0;
 
   // Fetch quiz for this module
-  const { data: quiz } = await supabase.from("quizzes").select("*").eq("module_id", id).single()
+  const { data: quiz } = await supabase
+    .from("quizzes")
+    .select("*")
+    .eq("module_id", id)
+    .single();
 
-  const assignmentIds = module.lessons?.flatMap((l: any) => l.assignments.map((a: any) => a.id)) || []
+  const assignmentIds =
+    module.lessons?.flatMap((l: any) => l.assignments.map((a: any) => a.id)) ||
+    [];
   const { data: submissions } = await supabase
     .from("submissions")
     .select("*")
     .eq("user_id", user.id)
-    .in("assignment_id", assignmentIds)
+    .in("assignment_id", assignmentIds);
 
   const allAssignmentsApproved =
     assignmentIds.length === 0 ||
     assignmentIds.every((assignmentId: string) => {
-      const submission = submissions?.find((s) => s.assignment_id === assignmentId)
-      return submission?.is_approved === true
-    })
+      const submission = submissions?.find(
+        (s) => s.assignment_id === assignmentId
+      );
+      return submission?.is_approved === true;
+    });
 
   const moduleAttempts = quizAttempts?.filter(
-    (a: { quizzes: { module_id: string } | null }) => a.quizzes?.module_id === id,
-  )
+    (a: { quizzes: { module_id: string } | null }) =>
+      a.quizzes?.module_id === id
+  );
   const lastFailedAttempt = moduleAttempts
     ?.filter((a: { passed: boolean }) => !a.passed)
     .sort(
       (a: { created_at: string }, b: { created_at: string }) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    )[0]
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0];
 
-  let quizCooldownRemaining = 0
+  let quizCooldownRemaining = 0;
   if (lastFailedAttempt) {
-    const sixHoursInMs = 6 * 60 * 60 * 1000
-    const timeSinceAttempt = Date.now() - new Date(lastFailedAttempt.created_at).getTime()
-    quizCooldownRemaining = Math.max(0, sixHoursInMs - timeSinceAttempt)
+    const sixHoursInMs = 6 * 60 * 60 * 1000;
+    const timeSinceAttempt =
+      Date.now() - new Date(lastFailedAttempt.created_at).getTime();
+    quizCooldownRemaining = Math.max(0, sixHoursInMs - timeSinceAttempt);
   }
 
-  const isQuizBlocked = !allAssignmentsApproved || quizCooldownRemaining > 0
+  const isQuizBlocked = !allAssignmentsApproved || quizCooldownRemaining > 0;
 
   const bestScore = moduleAttempts?.length
-    ? Math.max(...moduleAttempts.map((a: { percentage: number }) => a.percentage))
-    : null
-  const hasPassed = moduleAttempts?.some((a: { passed: boolean }) => a.passed)
-  const hasCompleted = !!hasPassed && !!allAssignmentsApproved
+    ? Math.max(
+        ...moduleAttempts.map((a: { percentage: number }) => a.percentage)
+      )
+    : null;
+  const hasPassed = moduleAttempts?.some((a: { passed: boolean }) => a.passed);
+  const hasCompleted = !!hasPassed && !!allAssignmentsApproved;
 
-  const sortedLessons = module.lessons?.sort((a: any, b: any) => a.order_index - b.order_index) || []
+  const sortedLessons =
+    module.lessons?.sort((a: any, b: any) => a.order_index - b.order_index) ||
+    [];
 
   return (
     <div className="p-8">
@@ -111,14 +123,20 @@ export default async function ModuleDetailPage({ params }: PageProps) {
             {String(moduleIndex + 1).padStart(2, "0")}
           </div>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold tracking-tight">{module.title}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {module.title}
+            </h1>
             <p className="mt-2 text-muted-foreground">{module.description}</p>
             <div className="mt-4 flex gap-4 text-sm">
               <span className="text-muted-foreground">
-                {sortedLessons.length} {sortedLessons.length === 1 ? "clase" : "clases"}
+                {sortedLessons.length}{" "}
+                {sortedLessons.length === 1 ? "clase" : "clases"}
               </span>
               <span className="text-muted-foreground">
-                {assignmentIds.length} {assignmentIds.length === 1 ? "trabajo práctico" : "trabajos prácticos"}
+                {assignmentIds.length}{" "}
+                {assignmentIds.length === 1
+                  ? "trabajo práctico"
+                  : "trabajos prácticos"}
               </span>
             </div>
           </div>
@@ -137,15 +155,22 @@ export default async function ModuleDetailPage({ params }: PageProps) {
 
           {sortedLessons.length === 0 ? (
             <div className="border border-border bg-card p-8 text-center">
-              <p className="text-muted-foreground">Este módulo aún no tiene clases disponibles.</p>
+              <p className="text-muted-foreground">
+                Este módulo aún no tiene clases disponibles.
+              </p>
             </div>
           ) : (
             sortedLessons.map((lesson: any, index: number) => {
-              const assignment = lesson.assignments?.[0]
-              const submission = assignment ? submissions?.find((s) => s.assignment_id === assignment.id) : null
+              const assignment = lesson.assignments?.[0];
+              const submission = assignment
+                ? submissions?.find((s) => s.assignment_id === assignment.id)
+                : null;
 
               return (
-                <div key={lesson.id} className="border border-border bg-card p-6">
+                <div
+                  key={lesson.id}
+                  className="border border-border bg-card p-6"
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex gap-4 flex-1">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-accent text-sm font-bold text-accent-foreground">
@@ -154,7 +179,9 @@ export default async function ModuleDetailPage({ params }: PageProps) {
                       <div className="flex-1">
                         <h3 className="font-semibold">{lesson.title}</h3>
                         {lesson.description && (
-                          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{lesson.description}</p>
+                          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                            {lesson.description}
+                          </p>
                         )}
                         {lesson.duration_minutes && (
                           <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
@@ -200,7 +227,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
                     </Link>
                   </div>
                 </div>
-              )
+              );
             })
           )}
         </div>
@@ -215,15 +242,25 @@ export default async function ModuleDetailPage({ params }: PageProps) {
                 </div>
                 <div>
                   <h3 className="font-semibold">Quiz del Módulo</h3>
-                  <p className="text-xs text-muted-foreground">Nota mínima: {quiz.passing_score}%</p>
+                  <p className="text-xs text-muted-foreground">
+                    Nota mínima: {quiz.passing_score}%
+                  </p>
                 </div>
               </div>
 
               {bestScore !== null && (
                 <div className="mb-4 rounded bg-muted p-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Mejor puntuación</span>
-                    <span className={hasPassed ? "font-semibold text-success" : "font-semibold text-destructive"}>
+                    <span className="text-muted-foreground">
+                      Mejor puntuación
+                    </span>
+                    <span
+                      className={
+                        hasPassed
+                          ? "font-semibold text-success"
+                          : "font-semibold text-destructive"
+                      }
+                    >
                       {Math.round(bestScore)}%
                     </span>
                   </div>
@@ -232,15 +269,20 @@ export default async function ModuleDetailPage({ params }: PageProps) {
 
               {isQuizBlocked && (
                 <div className="mb-4 rounded border border-warning/20 bg-warning/10 p-3">
-                  <p className="text-sm font-medium text-warning">Quiz bloqueado</p>
+                  <p className="text-sm font-medium text-warning">
+                    Quiz bloqueado
+                  </p>
                   {!allAssignmentsApproved && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Debes aprobar todos los trabajos prácticos del módulo primero.
+                      Debes aprobar todos los trabajos prácticos del módulo
+                      primero.
                     </p>
                   )}
                   {quizCooldownRemaining > 0 && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Debes esperar {Math.ceil(quizCooldownRemaining / (60 * 60 * 1000))} horas antes de reintentar.
+                      Debes esperar{" "}
+                      {Math.ceil(quizCooldownRemaining / (60 * 60 * 1000))}{" "}
+                      horas antes de reintentar.
                     </p>
                   )}
                 </div>
@@ -253,8 +295,15 @@ export default async function ModuleDetailPage({ params }: PageProps) {
                 </Button>
               ) : (
                 <Link href={`/dashboard/quiz/${quiz.id}`}>
-                  <Button className="w-full" variant={hasPassed ? "outline" : "default"}>
-                    {hasPassed ? "Repetir Quiz" : bestScore !== null ? "Reintentar Quiz" : "Comenzar Quiz"}
+                  <Button
+                    className="w-full"
+                    variant={hasPassed ? "outline" : "default"}
+                  >
+                    {hasPassed
+                      ? "Repetir Quiz"
+                      : bestScore !== null
+                      ? "Reintentar Quiz"
+                      : "Comenzar Quiz"}
                   </Button>
                 </Link>
               )}
@@ -265,15 +314,23 @@ export default async function ModuleDetailPage({ params }: PageProps) {
           {moduleIndex < (allModules?.length ?? 0) - 1 && (
             <div className="border border-border bg-card p-6">
               <h3 className="mb-2 font-semibold">Siguiente Módulo</h3>
-              <p className="mb-4 text-sm text-muted-foreground">{allModules![moduleIndex + 1].title}</p>
+              <p className="mb-4 text-sm text-muted-foreground">
+                {allModules![moduleIndex + 1].title}
+              </p>
               {hasCompleted ? (
-                <Link href={`/dashboard/modules/${allModules![moduleIndex + 1].id}`}>
+                <Link
+                  href={`/dashboard/modules/${allModules![moduleIndex + 1].id}`}
+                >
                   <Button variant="outline" className="w-full bg-transparent">
                     Continuar
                   </Button>
                 </Link>
               ) : (
-                <Button variant="outline" className="w-full bg-transparent" disabled>
+                <Button
+                  variant="outline"
+                  className="w-full bg-transparent"
+                  disabled
+                >
                   <Lock className="mr-2 h-4 w-4" />
                   Completa este módulo primero
                 </Button>
@@ -283,5 +340,5 @@ export default async function ModuleDetailPage({ params }: PageProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -69,34 +69,6 @@ export default async function QuizPage({ params }: PageProps) {
       return submission?.is_approved === true
     })
 
-  if (!allAssignmentsApproved) {
-    return (
-      <div className="p-8">
-        <Link
-          href={`/dashboard/modules/${quiz.modules.id}`}
-          className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Volver al módulo
-        </Link>
-
-        <div className="mx-auto max-w-2xl">
-          <div className="border border-warning bg-warning/5 p-8 text-center">
-            <Lock className="mx-auto mb-4 h-16 w-16 text-warning" />
-            <h1 className="mb-2 text-2xl font-bold">Quiz Bloqueado</h1>
-            <p className="text-muted-foreground">
-              Debes aprobar todos los trabajos prácticos del módulo "{quiz.modules.title}" antes de poder realizar este
-              quiz.
-            </p>
-            <Link href={`/dashboard/modules/${quiz.modules.id}`}>
-              <Button className="mt-6">Volver al módulo</Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   const { data: lastAttempt } = await supabase
     .from("quiz_attempts")
     .select("*")
@@ -106,78 +78,7 @@ export default async function QuizPage({ params }: PageProps) {
     .limit(1)
     .single()
 
-  if (lastAttempt && !lastAttempt.passed && lastAttempt.next_attempt_at) {
-    const nextAttemptTime = new Date(lastAttempt.next_attempt_at)
-    const now = new Date()
-
-    if (now < nextAttemptTime) {
-      const hoursLeft = Math.ceil((nextAttemptTime.getTime() - now.getTime()) / (1000 * 60 * 60))
-      const minutesLeft = Math.ceil((nextAttemptTime.getTime() - now.getTime()) / (1000 * 60))
-
-      return (
-        <div className="p-8">
-          <Link
-            href={`/dashboard/modules/${quiz.modules.id}`}
-            className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Volver al módulo
-          </Link>
-
-          <div className="mx-auto max-w-2xl">
-            <div className="border border-accent bg-accent/5 p-8 text-center">
-              <Clock className="mx-auto mb-4 h-16 w-16 text-accent" />
-              <h1 className="mb-2 text-2xl font-bold">Tiempo de Espera</h1>
-              <p className="mb-4 text-muted-foreground">Debes esperar 6 horas antes de volver a intentar este quiz.</p>
-              <div className="mb-2 text-3xl font-bold text-accent">
-                {hoursLeft > 0 ? `${hoursLeft}h` : `${minutesLeft}m`}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Podrás intentarlo nuevamente el{" "}
-                {nextAttemptTime.toLocaleDateString("es-ES", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-              <Link href={`/dashboard/modules/${quiz.modules.id}`}>
-                <Button className="mt-6 bg-transparent" variant="outline">
-                  Volver al módulo
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      )
-    }
-  }
-
-  // Check if module is unlocked (previous logic)
   const { data: allModules } = await supabase.from("modules").select("*").eq("is_published", true).order("order_index")
-
-  const { data: quizAttempts } = await supabase
-    .from("quiz_attempts")
-    .select("*, quizzes(module_id)")
-    .eq("user_id", user.id)
-
-  const moduleIndex = allModules?.findIndex((m) => m.id === quiz.modules.id) ?? 0
-  let isUnlocked = moduleIndex === 0
-
-  if (moduleIndex > 0) {
-    const prevModule = allModules![moduleIndex - 1]
-    const prevModuleAttempts = quizAttempts?.filter(
-      (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
-        a.quizzes?.module_id === prevModule.id && a.passed,
-    )
-    isUnlocked = prevModuleAttempts && prevModuleAttempts.length > 0
-  }
-
-  if (!isUnlocked) {
-    redirect("/dashboard/modules")
-  }
 
   // Sort questions by order_index and options
   const sortedQuestions = quiz.quiz_questions
