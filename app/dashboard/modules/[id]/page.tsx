@@ -44,7 +44,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
       (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
         a.quizzes?.module_id === prevModule.id && a.passed,
     )
-    isUnlocked = prevModuleAttempts && prevModuleAttempts.length > 0
+    isUnlocked = !!(prevModuleAttempts && prevModuleAttempts.length > 0)
   }
 
   if (!isUnlocked) {
@@ -62,10 +62,10 @@ export default async function ModuleDetailPage({ params }: PageProps) {
     .in("assignment_id", assignmentIds)
 
   const allAssignmentsApproved =
-    assignmentIds.length > 0 &&
+    assignmentIds.length === 0 ||
     assignmentIds.every((assignmentId: string) => {
       const submission = submissions?.find((s) => s.assignment_id === assignmentId)
-      return submission?.status === "approved"
+      return submission?.is_approved === true
     })
 
   const moduleAttempts = quizAttempts?.filter(
@@ -166,17 +166,17 @@ export default async function ModuleDetailPage({ params }: PageProps) {
 
                     {assignment && (
                       <div className="flex flex-col items-end gap-2">
-                        {submission?.status === "approved" ? (
+                        {submission?.is_approved === true ? (
                           <span className="inline-flex items-center gap-1 bg-success/10 px-2 py-1 text-xs font-medium text-success">
                             <CheckCircle className="h-3 w-3" />
                             Aprobado
                           </span>
-                        ) : submission?.status === "rejected" ? (
+                        ) : submission?.is_approved === false ? (
                           <span className="inline-flex items-center gap-1 bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive">
                             <XCircle className="h-3 w-3" />
                             Rechazado
                           </span>
-                        ) : submission?.status === "submitted" ? (
+                        ) : submission ? (
                           <span className="inline-flex items-center gap-1 bg-accent/10 px-2 py-1 text-xs font-medium text-accent">
                             <Clock className="h-3 w-3" />
                             En revisión
