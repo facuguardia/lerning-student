@@ -59,10 +59,26 @@ export default async function ModulesPage() {
     });
   };
 
-  const moduleStates = (modules || []).map((module) => ({
-    ...module,
-    isUnlocked: true,
-  }));
+  const isModuleCompleted = (moduleId: string) => {
+    const progress = moduleProgress?.find((p) => p.module_id === moduleId);
+    const assignmentsApproved = areModuleAssignmentsApproved(moduleId);
+    const attempts = quizAttempts?.filter(
+      (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
+        a.quizzes?.module_id === moduleId && a.passed
+    );
+    const passedQuiz = !!attempts && attempts.length > 0;
+    return assignmentsApproved && (passedQuiz || !!progress?.completed_at);
+  };
+
+  const moduleStates = (modules || []).map((module, index, arr) => {
+    const isFirst = index === 0;
+    const prevModuleId = !isFirst ? arr[index - 1].id : null;
+    const prevCompleted = prevModuleId ? isModuleCompleted(prevModuleId) : true;
+    return {
+      ...module,
+      isUnlocked: isFirst ? true : prevCompleted,
+    };
+  });
 
   const getModuleQuizScore = (moduleId: string) => {
     const attempts = quizAttempts?.filter(
@@ -73,17 +89,6 @@ export default async function ModulesPage() {
     return Math.max(
       ...attempts.map((a: { percentage: number }) => a.percentage)
     );
-  };
-
-  const isModuleCompleted = (moduleId: string) => {
-    const progress = moduleProgress?.find((p) => p.module_id === moduleId);
-    const assignmentsApproved = areModuleAssignmentsApproved(moduleId);
-    const attempts = quizAttempts?.filter(
-      (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
-        a.quizzes?.module_id === moduleId && a.passed
-    );
-    const passedQuiz = !!attempts && attempts.length > 0;
-    return assignmentsApproved && (passedQuiz || !!progress?.completed_at);
   };
 
   const completedModules = moduleStates.filter((m) =>
