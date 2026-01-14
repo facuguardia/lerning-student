@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Plus, Edit, BookOpen, FileText } from "lucide-react"
 import Link from "next/link"
+import { DeleteLessonButton } from "@/components/admin/delete-lesson-button"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -98,6 +99,7 @@ export default async function ModuleLessonsPage({ params }: PageProps) {
                       <Edit className="h-4 w-4" />
                     </Button>
                   </Link>
+                  <DeleteLessonButton lessonId={lesson.id} lessonTitle={lesson.title} />
                 </div>
               </div>
 

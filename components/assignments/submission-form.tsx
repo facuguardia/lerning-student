@@ -1,36 +1,40 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Upload, LinkIcon, Github, Globe, X } from "lucide-react"
-import type { Submission } from "@/lib/types"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Upload, LinkIcon, Github, Globe, X } from "lucide-react";
+import type { Submission } from "@/lib/types";
 
 interface SubmissionFormProps {
-  assignmentId: string
-  userId: string
-  existingSubmission: Submission | null
+  assignmentId: string;
+  userId: string;
+  existingSubmission: Submission | null;
 }
 
-export function SubmissionForm({ assignmentId, userId, existingSubmission }: SubmissionFormProps) {
-  const [linkUrl, setLinkUrl] = useState(existingSubmission?.link_url || "")
+export function SubmissionForm({
+  assignmentId,
+  userId,
+  existingSubmission,
+}: SubmissionFormProps) {
+  const [linkUrl, setLinkUrl] = useState(existingSubmission?.link_url || "");
   const [linkType, setLinkType] = useState<"github" | "vercel" | "other">(
-    (existingSubmission?.link_type as "github" | "vercel" | "other") || "github",
-  )
-  const [comment, setComment] = useState(existingSubmission?.comment || "")
-  const [file, setFile] = useState<File | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
+    (existingSubmission?.link_type as "github" | "vercel" | "other") || "github"
+  );
+  const [comment, setComment] = useState(existingSubmission?.comment || "");
+  const [file, setFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0]
+    const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       // Check file type
       const validTypes = [
@@ -40,53 +44,70 @@ export function SubmissionForm({ assignmentId, userId, existingSubmission }: Sub
         "image/png",
         "image/jpeg",
         "image/webp",
-      ]
+      ];
       if (!validTypes.includes(selectedFile.type)) {
-        setError("Solo se permiten PDF, ZIP o imágenes (PNG/JPG/WEBP)")
-        return
+        setError("Solo se permiten PDF, ZIP o imágenes (PNG/JPG/WEBP)");
+        return;
       }
       // Check file size (max 10MB)
       if (selectedFile.size > 10 * 1024 * 1024) {
-        setError("El archivo no puede superar los 10MB")
-        return
+        setError("El archivo no puede superar los 10MB");
+        return;
       }
-      setFile(selectedFile)
-      setError(null)
+      setFile(selectedFile);
+      setError(null);
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setError(null)
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
 
     if (!linkUrl && !file) {
-      setError("Debes proporcionar un enlace o subir un archivo")
-      setIsSubmitting(false)
-      return
+      setError("Debes proporcionar un enlace o subir un archivo");
+      setIsSubmitting(false);
+      return;
     }
 
-    const supabase = createClient()
+    const supabase = createClient();
 
     try {
-      let fileUrl = existingSubmission?.file_url
-      let fileName = existingSubmission?.file_name
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || user.id !== userId) {
+        setError("Debes iniciar sesión para subir archivos");
+        setIsSubmitting(false);
+        return;
+      }
+
+      let fileUrl = existingSubmission?.file_url;
+      let fileName = existingSubmission?.file_name;
 
       // Upload file if provided
       if (file) {
-        const fileExt = file.name.split(".").pop()
-        const filePath = `${userId}/${assignmentId}/${Date.now()}.${fileExt}`
+        const fileExt = file.name.split(".").pop();
+        const filePath = `${userId}/${assignmentId}/${Date.now()}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage.from("submissions").upload(filePath, file)
+        const { error: uploadError } = await supabase.storage
+          .from("submissions")
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: file.type || "application/octet-stream",
+          });
 
-        if (uploadError) throw uploadError
+        if (uploadError) {
+          throw new Error(uploadError.message);
+        }
 
         const {
           data: { publicUrl },
-        } = supabase.storage.from("submissions").getPublicUrl(filePath)
+        } = supabase.storage.from("submissions").getPublicUrl(filePath);
 
-        fileUrl = publicUrl
-        fileName = file.name
+        fileUrl = publicUrl;
+        fileName = file.name;
       }
 
       // Create or update submission
@@ -102,33 +123,44 @@ export function SubmissionForm({ assignmentId, userId, existingSubmission }: Sub
             status: "submitted",
             submitted_at: new Date().toISOString(),
           })
-          .eq("id", existingSubmission.id)
+          .eq("id", existingSubmission.id);
 
-        if (updateError) throw updateError
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
       } else {
-        const { error: insertError } = await supabase.from("submissions").insert({
-          assignment_id: assignmentId,
-          user_id: userId,
-          link_url: linkUrl || null,
-          link_type: linkUrl ? linkType : null,
-          file_url: fileUrl,
-          file_name: fileName,
-          comment: comment || null,
-          status: "submitted",
-          submitted_at: new Date().toISOString(),
-        })
+        const { error: insertError } = await supabase
+          .from("submissions")
+          .insert({
+            assignment_id: assignmentId,
+            user_id: userId,
+            link_url: linkUrl || null,
+            link_type: linkUrl ? linkType : null,
+            file_url: fileUrl,
+            file_name: fileName,
+            comment: comment || null,
+            status: "submitted",
+            submitted_at: new Date().toISOString(),
+          });
 
-        if (insertError) throw insertError
+        if (insertError) {
+          throw new Error(insertError.message);
+        }
       }
 
-      router.refresh()
+      router.refresh();
     } catch (err) {
-      console.error(err)
-      setError("Error al enviar la entrega. Intenta de nuevo.")
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === "string"
+          ? err
+          : "Error al enviar la entrega. Intenta de nuevo.";
+      setError(message);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="border border-border bg-card p-6">
@@ -143,21 +175,33 @@ export function SubmissionForm({ assignmentId, userId, existingSubmission }: Sub
               <button
                 type="button"
                 onClick={() => setLinkType("github")}
-                className={`flex h-10 w-10 items-center justify-center ${linkType === "github" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
+                className={`flex h-10 w-10 items-center justify-center ${
+                  linkType === "github"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary"
+                }`}
               >
                 <Github className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setLinkType("vercel")}
-                className={`flex h-10 w-10 items-center justify-center ${linkType === "vercel" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
+                className={`flex h-10 w-10 items-center justify-center ${
+                  linkType === "vercel"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary"
+                }`}
               >
                 <Globe className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setLinkType("other")}
-                className={`flex h-10 w-10 items-center justify-center ${linkType === "other" ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
+                className={`flex h-10 w-10 items-center justify-center ${
+                  linkType === "other"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary"
+                }`}
               >
                 <LinkIcon className="h-4 w-4" />
               </button>
@@ -168,8 +212,8 @@ export function SubmissionForm({ assignmentId, userId, existingSubmission }: Sub
                 linkType === "github"
                   ? "https://github.com/user/repo"
                   : linkType === "vercel"
-                    ? "https://project.vercel.app"
-                    : "https://..."
+                  ? "https://project.vercel.app"
+                  : "https://..."
               }
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
@@ -196,8 +240,12 @@ export function SubmissionForm({ assignmentId, userId, existingSubmission }: Sub
             ) : (
               <label className="flex cursor-pointer flex-col items-center gap-2">
                 <Upload className="h-8 w-8 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Haz clic para subir</span>
-                <span className="text-xs text-muted-foreground">PDF, ZIP, PNG, JPG, WEBP (máx. 10MB)</span>
+                <span className="text-sm text-muted-foreground">
+                  Haz clic para subir
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  PDF, ZIP, PNG, JPG, WEBP (máx. 10MB)
+                </span>
                 <input
                   type="file"
                   accept=".pdf,.zip,.png,.jpg,.jpeg,.webp"
@@ -224,9 +272,13 @@ export function SubmissionForm({ assignmentId, userId, existingSubmission }: Sub
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Enviando..." : existingSubmission ? "Actualizar entrega" : "Enviar trabajo"}
+          {isSubmitting
+            ? "Enviando..."
+            : existingSubmission
+            ? "Actualizar entrega"
+            : "Enviar trabajo"}
         </Button>
       </form>
     </div>
-  )
+  );
 }
