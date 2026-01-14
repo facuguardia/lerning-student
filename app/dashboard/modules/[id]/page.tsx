@@ -91,6 +91,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
     ? Math.max(...moduleAttempts.map((a: { percentage: number }) => a.percentage))
     : null
   const hasPassed = moduleAttempts?.some((a: { passed: boolean }) => a.passed)
+  const hasCompleted = !!hasPassed && !!allAssignmentsApproved
 
   const sortedLessons = module.lessons?.sort((a: any, b: any) => a.order_index - b.order_index) || []
 
@@ -121,7 +122,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
               </span>
             </div>
           </div>
-          {hasPassed && (
+          {hasCompleted && (
             <div className="flex items-center gap-2 bg-success/10 px-3 py-1.5 text-sm font-medium text-success">
               <CheckCircle className="h-4 w-4" />
               Módulo Completado
@@ -265,7 +266,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
             <div className="border border-border bg-card p-6">
               <h3 className="mb-2 font-semibold">Siguiente Módulo</h3>
               <p className="mb-4 text-sm text-muted-foreground">{allModules![moduleIndex + 1].title}</p>
-              {hasPassed ? (
+              {hasCompleted ? (
                 <Link href={`/dashboard/modules/${allModules![moduleIndex + 1].id}`}>
                   <Button variant="outline" className="w-full bg-transparent">
                     Continuar

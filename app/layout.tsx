@@ -9,7 +9,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Vibe Learning - LMS",
+  title: "Vibe Learning",
   description: "Sistema de Gestión de Aprendizaje moderno y eficiente",
   icons: {
     icon: "/icon.svg",

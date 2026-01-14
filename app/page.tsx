@@ -86,7 +86,7 @@ export default async function HomePage() {
         {/* Stats */}
         <section className="border-y border-border bg-secondary/50">
           <div className="mx-auto grid max-w-7xl grid-cols-3 divide-x divide-border">
-            <StatBlock value="78%" label="Nota mínima para avanzar" />
+            <StatBlock value="80%" label="Nota mínima para avanzar" />
             <StatBlock value={`${moduleCount}`} label="Módulos publicados" />
             <StatBlock value="100%" label="Feedback personalizado" />
           </div>

@@ -1,73 +1,113 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
-import { ModuleCard } from "@/components/dashboard/module-card"
-import { ProgressBar } from "@/components/dashboard/progress-bar"
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { ModuleCard } from "@/components/dashboard/module-card";
+import { ProgressBar } from "@/components/dashboard/progress-bar";
 
 export default async function ModulesPage() {
-  const supabase = await createClient()
+  const supabase = await createClient();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login")
+    redirect("/auth/login");
   }
 
   // Fetch all modules
-  const { data: modules } = await supabase.from("modules").select("*").eq("is_published", true).order("order_index")
+  const { data: modules } = await supabase
+    .from("modules")
+    .select("*")
+    .eq("is_published", true)
+    .order("order_index");
 
   // Fetch user's quiz attempts
   const { data: quizAttempts } = await supabase
     .from("quiz_attempts")
     .select("*, quizzes(module_id)")
-    .eq("user_id", user.id)
+    .eq("user_id", user.id);
 
   // Fetch module progress
-  const { data: moduleProgress } = await supabase.from("module_progress").select("*").eq("user_id", user.id)
+  const { data: moduleProgress } = await supabase
+    .from("module_progress")
+    .select("*")
+    .eq("user_id", user.id);
+
+  const { data: lessons } = await supabase
+    .from("lessons")
+    .select("module_id, assignments(id)");
+  const { data: submissions } = await supabase
+    .from("submissions")
+    .select("assignment_id, is_approved")
+    .eq("user_id", user.id);
+
+  const assignmentsByModule = new Map<string, string[]>();
+  lessons?.forEach((l: any) => {
+    const current = assignmentsByModule.get(l.module_id) || [];
+    const ids = (l.assignments || []).map((a: any) => a.id);
+    assignmentsByModule.set(l.module_id, current.concat(ids));
+  });
+
+  const areModuleAssignmentsApproved = (moduleId: string) => {
+    const ids = assignmentsByModule.get(moduleId) || [];
+    if (ids.length === 0) return true;
+    return ids.every((assignmentId) => {
+      const submission = submissions?.find(
+        (s: any) => s.assignment_id === assignmentId
+      );
+      return submission?.is_approved === true;
+    });
+  };
 
   // Calculate which modules are unlocked
   const moduleStates = (modules || []).map((module, index) => {
     if (index === 0) {
-      return { ...module, isUnlocked: true }
+      return { ...module, isUnlocked: true };
     }
 
-    const prevModule = modules![index - 1]
+    const prevModule = modules![index - 1];
     const prevModuleAttempts = quizAttempts?.filter(
       (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
-        a.quizzes?.module_id === prevModule.id && a.passed,
-    )
+        a.quizzes?.module_id === prevModule.id && a.passed
+    );
 
     return {
       ...module,
-      isUnlocked: prevModuleAttempts && prevModuleAttempts.length > 0,
-    }
-  })
+      isUnlocked:
+        !!prevModuleAttempts &&
+        prevModuleAttempts.length > 0 &&
+        areModuleAssignmentsApproved(prevModule.id),
+    };
+  });
 
   const getModuleQuizScore = (moduleId: string) => {
     const attempts = quizAttempts?.filter(
-      (a: { quizzes: { module_id: string } | null }) => a.quizzes?.module_id === moduleId,
-    )
-    if (!attempts || attempts.length === 0) return null
-    return Math.max(...attempts.map((a: { percentage: number }) => a.percentage))
-  }
+      (a: { quizzes: { module_id: string } | null }) =>
+        a.quizzes?.module_id === moduleId
+    );
+    if (!attempts || attempts.length === 0) return null;
+    return Math.max(
+      ...attempts.map((a: { percentage: number }) => a.percentage)
+    );
+  };
 
   const isModuleCompleted = (moduleId: string) => {
-    // Check explicit progress record
-    const progress = moduleProgress?.find((p) => p.module_id === moduleId)
-    if (progress?.completed_at) return true
-
-    // Fallback: Check if user passed the quiz for this module
+    const progress = moduleProgress?.find((p) => p.module_id === moduleId);
+    const assignmentsApproved = areModuleAssignmentsApproved(moduleId);
     const attempts = quizAttempts?.filter(
       (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
-        a.quizzes?.module_id === moduleId && a.passed,
-    )
-    return !!attempts && attempts.length > 0
-  }
+        a.quizzes?.module_id === moduleId && a.passed
+    );
+    const passedQuiz = !!attempts && attempts.length > 0;
+    return assignmentsApproved && (passedQuiz || !!progress?.completed_at);
+  };
 
-  const completedModules = moduleStates.filter((m) => isModuleCompleted(m.id)).length
-  const totalModules = moduleStates.length
-  const overallProgress = totalModules > 0 ? (completedModules / totalModules) * 100 : 0
+  const completedModules = moduleStates.filter((m) =>
+    isModuleCompleted(m.id)
+  ).length;
+  const totalModules = moduleStates.length;
+  const overallProgress =
+    totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
 
   return (
     <div className="p-8">
@@ -75,7 +115,8 @@ export default async function ModulesPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Módulos del Curso</h1>
         <p className="mt-1 text-muted-foreground">
-          Completa cada módulo en orden. Debes aprobar el quiz con 70% para desbloquear el siguiente.
+          Completa cada módulo en orden. Debes aprobar todos los trabajos
+          prácticos y el quiz para desbloquear el siguiente.
         </p>
       </div>
 
@@ -112,5 +153,5 @@ export default async function ModulesPage() {
         ))}
       </div>
     </div>
-  )
+  );
 }

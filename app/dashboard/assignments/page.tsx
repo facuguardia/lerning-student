@@ -26,6 +26,22 @@ export default async function AssignmentsPage() {
 
   const { data: allModules } = await supabase.from("modules").select("*").eq("is_published", true).order("order_index")
 
+  const assignmentsByModule = new Map<string, string[]>()
+  lessons?.forEach((lesson: any) => {
+    const current = assignmentsByModule.get(lesson.modules.id) || []
+    const ids = (lesson.assignments || []).map((a: any) => a.id)
+    assignmentsByModule.set(lesson.modules.id, current.concat(ids))
+  })
+
+  const areModuleAssignmentsApproved = (moduleId: string) => {
+    const ids = assignmentsByModule.get(moduleId) || []
+    if (ids.length === 0) return true
+    return ids.every((assignmentId) => {
+      const submission = submissions?.find((s: any) => s.assignment_id === assignmentId)
+      return submission?.is_approved === true
+    })
+  }
+
   const isModuleUnlocked = (moduleId: string) => {
     const moduleIndex = allModules?.findIndex((m) => m.id === moduleId) ?? 0
     if (moduleIndex === 0) return true
@@ -35,7 +51,7 @@ export default async function AssignmentsPage() {
       (a: { quizzes: { module_id: string } | null; passed: boolean }) =>
         a.quizzes?.module_id === prevModule.id && a.passed,
     )
-    return prevModuleAttempts && prevModuleAttempts.length > 0
+    return !!prevModuleAttempts && prevModuleAttempts.length > 0 && areModuleAssignmentsApproved(prevModule.id)
   }
 
   const getSubmission = (assignmentId: string) => {
