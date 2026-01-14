@@ -203,9 +203,11 @@ export default async function GradingPage() {
                     </td>
                     <td className="px-4 py-3">
                       <Link href={`/admin/grading/${submission.id}`}>
-                        <Button variant="ghost" size="sm">
-                          {submission.status === "graded" ? "Ver" : "Calificar"}
-                        </Button>
+                        {submission.status === "graded" ? (
+                          <Button size="sm">Ver</Button>
+                        ) : (
+                          <Button size="sm">Calificar</Button>
+                        )}
                       </Link>
                     </td>
                   </tr>
