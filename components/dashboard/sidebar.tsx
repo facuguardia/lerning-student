@@ -55,11 +55,12 @@ export function Sidebar({ profile }: SidebarProps) {
     { href: "/admin/final-projects", label: "Proyectos Finales", icon: Code2 },
     { href: "/admin/students", label: "Estudiantes", icon: Users },
     { href: "/admin/grading", label: "Calificaciones", icon: Award },
-    { href: "/admin/chat", label: "Chat", icon: MessageSquare },
+    { href: "/admin/messages", label: "Mensajería", icon: MessageSquare },
   ];
 
   const links = isAdmin ? adminLinks : studentLinks;
   const [quizzesOpen, setQuizzesOpen] = useState(false);
+  const [messagesOpen, setMessagesOpen] = useState(false);
 
   const getInitials = (fullName?: string, email?: string) => {
     const name = (fullName || "").trim();
@@ -87,6 +88,14 @@ export function Sidebar({ profile }: SidebarProps) {
     const openByRoute =
       pathname.startsWith("/admin/quizzes") || pathname === "/admin/final-quiz";
     setQuizzesOpen(openByRoute);
+  }, [pathname]);
+
+  useEffect(() => {
+    const openByRoute =
+      pathname.startsWith("/admin/chat") ||
+      pathname.startsWith("/admin/contacts") ||
+      pathname === "/admin/messages";
+    setMessagesOpen(openByRoute);
   }, [pathname]);
 
   return (
@@ -163,6 +172,69 @@ export function Sidebar({ profile }: SidebarProps) {
                       >
                         <ClipboardList className="h-4 w-4" />
                         Quiz Final
+                      </Link>
+                    </>
+                  )}
+                </>
+              ) : isAdmin && link.href === "/admin/messages" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setMessagesOpen((v) => !v)}
+                    className={cn(
+                      "flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors text-left rounded-md",
+                      messagesOpen ||
+                        pathname.startsWith("/admin/chat") ||
+                        pathname.startsWith("/admin/contacts")
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="flex-1">Mensajería</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={cn(
+                        "lucide lucide-chevron-down transition-transform",
+                        messagesOpen ? "rotate-180" : "rotate-0"
+                      )}
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                  {messagesOpen && (
+                    <>
+                      <Link
+                        href="/admin/chat"
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors pl-8 rounded-md",
+                          pathname.startsWith("/admin/chat")
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                        )}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        Chat
+                      </Link>
+                      <Link
+                        href="/admin/contacts"
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors pl-8 rounded-md",
+                          pathname.startsWith("/admin/contacts")
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                        )}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        Contactos
                       </Link>
                     </>
                   )}
