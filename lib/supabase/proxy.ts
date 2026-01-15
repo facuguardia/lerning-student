@@ -29,10 +29,19 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  if (request.nextUrl.pathname === "/") {
+    if (user) {
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+      const url = request.nextUrl.clone()
+      url.pathname = profile?.role === "admin" ? "/admin" : "/dashboard"
+      return NextResponse.redirect(url)
+    }
+  }
+
   // Protect dashboard routes
   if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {
     const url = request.nextUrl.clone()
-    url.pathname = "/auth/login"
+    url.pathname = "/"
     return NextResponse.redirect(url)
   }
 
@@ -50,7 +59,7 @@ export async function updateSession(request: NextRequest) {
   // Redirect to login if accessing admin without auth
   if (request.nextUrl.pathname.startsWith("/admin") && !user) {
     const url = request.nextUrl.clone()
-    url.pathname = "/auth/login"
+    url.pathname = "/"
     return NextResponse.redirect(url)
   }
 
