@@ -1,13 +1,20 @@
-import type React from "react"
-import { createClient } from "@/lib/supabase/server"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { BookOpen, GraduationCap, Award, ArrowRight } from "lucide-react"
+import type React from "react";
+import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { BookOpen, GraduationCap, Award, ArrowRight } from "lucide-react";
+import { Testimonials } from "@/components/landing/Testimonials";
+import { FAQ } from "@/components/landing/FAQ";
+import { ContactForm } from "@/components/landing/ContactForm";
+import { CTA } from "@/components/landing/CTA";
 
 export default async function HomePage() {
-  const supabase = await createClient()
-  const { data: modules } = await supabase.from("modules").select("id").eq("is_published", true)
-  const moduleCount = modules?.length ?? 0
+  const supabase = await createClient();
+  const { data: modules } = await supabase
+    .from("modules")
+    .select("id")
+    .eq("is_published", true);
+  const moduleCount = modules?.length ?? 0;
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -17,7 +24,9 @@ export default async function HomePage() {
             <div className="flex h-8 w-8 items-center justify-center bg-primary">
               <GraduationCap className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">Vibe Learning</span>
+            <span className="text-lg font-semibold tracking-tight">
+              Vibe Learning
+            </span>
           </div>
           <nav className="flex items-center gap-4">
             <Link href="/auth/login">
@@ -41,8 +50,9 @@ export default async function HomePage() {
                 Aprende desarrollo web de forma estructurada
               </h1>
               <p className="text-pretty text-lg text-muted-foreground">
-                Un sistema de aprendizaje progresivo con módulos, quizzes y proyectos prácticos. Avanza a tu ritmo y
-                obtén feedback personalizado.
+                Un sistema de aprendizaje progresivo con módulos, quizzes y
+                proyectos prácticos. Avanza a tu ritmo y obtén feedback
+                personalizado.
               </p>
               <div className="flex gap-4">
                 <Link href="/auth/sign-up">
@@ -91,6 +101,18 @@ export default async function HomePage() {
             <StatBlock value="100%" label="Feedback personalizado" />
           </div>
         </section>
+
+        {/* Testimonials */}
+        <Testimonials />
+
+        {/* FAQ */}
+        <FAQ />
+
+        {/* Contact */}
+        <ContactForm />
+
+        {/* CTA */}
+        <CTA />
       </main>
 
       {/* Footer */}
@@ -110,7 +132,7 @@ export default async function HomePage() {
         </div>
       </footer>
     </div>
-  )
+  );
 }
 
 function FeatureCard({
@@ -118,17 +140,19 @@ function FeatureCard({
   title,
   description,
 }: {
-  icon: React.ReactNode
-  title: string
-  description: string
+  icon: React.ReactNode;
+  title: string;
+  description: string;
 }) {
   return (
     <div className="space-y-3 border border-border bg-card p-6">
-      <div className="flex h-10 w-10 items-center justify-center bg-primary text-primary-foreground">{icon}</div>
+      <div className="flex h-10 w-10 items-center justify-center bg-primary text-primary-foreground">
+        {icon}
+      </div>
       <h3 className="font-semibold">{title}</h3>
       <p className="text-sm text-muted-foreground">{description}</p>
     </div>
-  )
+  );
 }
 
 function StatBlock({ value, label }: { value: string; label: string }) {
@@ -137,5 +161,5 @@ function StatBlock({ value, label }: { value: string; label: string }) {
       <p className="text-4xl font-bold tracking-tight">{value}</p>
       <p className="mt-2 text-sm text-muted-foreground">{label}</p>
     </div>
-  )
+  );
 }
