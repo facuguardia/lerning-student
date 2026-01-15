@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ModuleCard } from "@/components/dashboard/module-card";
 import { ProgressBar } from "@/components/dashboard/progress-bar";
+
+export const metadata: Metadata = {
+  title: "Módulos",
+  description: "Listado de módulos publicados y tu avance en cada uno.",
+};
 
 export default async function ModulesPage() {
   const supabase = await createClient();

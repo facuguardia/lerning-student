@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ModuleCard } from "@/components/dashboard/module-card";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { ProgressBar } from "@/components/dashboard/progress-bar";
 import { BookOpen, Award, FileText, TrendingUp } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Panel del curso con progreso, módulos y actividades.",
+};
 
 export default async function DashboardPage() {
   const supabase = await createClient();

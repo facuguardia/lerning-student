@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
@@ -7,6 +8,25 @@ import { Button } from "@/components/ui/button";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: quiz } = await supabase
+    .from("quizzes")
+    .select("title, modules(title)")
+    .eq("id", id)
+    .single();
+  const moduleTitle = (quiz as any)?.modules?.title as string | undefined;
+  const resolvedTitle =
+    (quiz as any)?.title || (moduleTitle ? `Quiz de ${moduleTitle}` : "Quiz");
+  const description = moduleTitle
+    ? `Evaluación del módulo ${moduleTitle}.`
+    : "Evaluación del módulo.";
+  return { title: resolvedTitle, description };
 }
 
 export default async function QuizPage({ params }: PageProps) {

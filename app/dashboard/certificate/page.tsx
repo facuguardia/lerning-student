@@ -1,7 +1,13 @@
+import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Award, CheckCircle } from "lucide-react"
 import { CertificateDownload } from "@/components/dashboard/certificate-download"
+
+export const metadata: Metadata = {
+  title: "Certificado",
+  description: "Descarga tu certificado cuando completes todos los requisitos.",
+}
 
 export default async function CertificatePage() {
   const supabase = await createClient()
@@ -121,4 +127,3 @@ export default async function CertificatePage() {
     </div>
   )
 }
-

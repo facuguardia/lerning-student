@@ -1,9 +1,15 @@
+import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { FinalProjectSubmissionForm } from "@/components/final-project/submission-form"
 import { FinalProjectSubmissionStatus } from "@/components/final-project/submission-status"
+
+export const metadata: Metadata = {
+  title: "Entregar Proyecto Final",
+  description: "Formulario de entrega y estado del proyecto final.",
+}
 
 export default async function SubmitFinalProjectPage() {
   const supabase = await createClient()

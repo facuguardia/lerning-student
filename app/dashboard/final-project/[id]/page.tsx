@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
@@ -6,6 +7,21 @@ import { Button } from "@/components/ui/button"
 
 interface PageProps {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: project } = await supabase
+    .from("final_projects")
+    .select("title, description")
+    .eq("id", id)
+    .single()
+  const title = project ? `Proyecto Final: ${project.title}` : "Proyecto Final"
+  const description = project?.description || "Detalle del proyecto final del curso."
+  return { title, description }
 }
 
 export default async function FinalProjectDetailPage({ params }: PageProps) {

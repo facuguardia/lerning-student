@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
@@ -14,6 +15,21 @@ import {
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: module } = await supabase
+    .from("modules")
+    .select("title, description")
+    .eq("id", id)
+    .single();
+  const title = module ? `Módulo: ${module.title}` : "Módulo";
+  const description = module?.description || "Detalle del módulo del curso.";
+  return { title, description };
 }
 
 export default async function ModuleDetailPage({ params }: PageProps) {

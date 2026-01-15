@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
@@ -15,6 +16,24 @@ import type React from "react";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: lesson } = await supabase
+    .from("lessons")
+    .select("title, description, modules(title)")
+    .eq("id", id)
+    .single();
+  const moduleTitle = (lesson as any)?.modules?.title as string | undefined;
+  const title = lesson ? `Clase: ${lesson.title}` : "Clase";
+  const description =
+    lesson?.description ||
+    (moduleTitle ? `Contenido de ${moduleTitle}.` : "Detalle de la clase.");
+  return { title, description };
 }
 
 function RichTextRenderer({ text }: { text: string }) {

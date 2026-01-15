@@ -1,8 +1,14 @@
+import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Code2, Lock, CheckCircle } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Proyecto Final",
+  description: "Selecciona y entrega tu proyecto final del curso.",
+}
 
 export default async function FinalProjectPage() {
   const supabase = await createClient()

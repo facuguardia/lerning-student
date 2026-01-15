@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.facuguardia.dev"),
   title: {
     default: "Vibe Learning",
-    template: "%s — Vibe Learning",
+    template: "Vibe Learning - %s",
   },
   description: "Sistema de Gestión de Aprendizaje moderno y eficiente",
   applicationName: "Vibe Learning",

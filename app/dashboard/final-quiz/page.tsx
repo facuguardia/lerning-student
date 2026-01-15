@@ -1,9 +1,15 @@
+import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Lock, Clock } from "lucide-react"
 import { FinalQuizInterface } from "@/components/final-quiz/quiz-interface"
 import { Button } from "@/components/ui/button"
+
+export const metadata: Metadata = {
+  title: "Quiz Final",
+  description: "Accede al quiz final del curso cuando completes los módulos.",
+}
 
 export default async function FinalQuizPage() {
   const supabase = await createClient()
